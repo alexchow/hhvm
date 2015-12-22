@@ -40,10 +40,14 @@ let client_establish_connection_exception _ = ()
 let client_connect_once _ = ()
 let client_connect_once_busy _ = ()
 let check_response _ = ()
-let got_client_channels _ = ()
-let get_client_channels_exception _ = ()
-let handled_connection _ = ()
-let handle_connection_exception _ = ()
+let got_client_channels _ =
+  Printf.eprintf "Got client channels.\n%!"
+let get_client_channels_exception _ =
+  Printf.eprintf "Got_client_channels exception\n%!"
+let handled_connection _ =
+  Printf.eprintf "Handled connection.\n%!"
+let handle_connection_exception _ =
+  Printf.eprintf "handle_connection exception\n%!"
 let build_differs _ _ _ = ()
 let build_same _ _ = ()
 let recheck_end _ _ _ _ _ = ()
@@ -64,7 +68,9 @@ let with_init_type _ f = f ()
 
 (** Server Monitor events *)
 let accepting_on_socket_exception _ = ()
-let ack_and_handoff_exception _ = ()
+let ack_and_handoff_exception e =
+  (Printf.eprintf "ack_and_handoff_exception: %s%!" (Printexc.to_string e);
+  Printf.eprintf "%s\n%!" (Printexc.get_backtrace()))
 let accepted_client_fd _ = ()
 let client_connection_sent _ = ()
 let malformed_build_id _ = ()

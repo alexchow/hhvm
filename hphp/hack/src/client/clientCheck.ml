@@ -58,6 +58,7 @@ let main args =
     expiry = args.timeout;
     no_load = args.no_load;
   } in
+  Printf.eprintf "ClientConnection established\n%!";
   let exit_status =
     match args.mode with
     | MODE_LIST_FILES ->

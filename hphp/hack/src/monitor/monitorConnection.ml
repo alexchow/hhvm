@@ -10,6 +10,10 @@
 
 open ServerMonitorUtils
 
+let from_channel ic =
+  (** TODO: Add timeout *)
+  Marshal_tools.from_fd_with_preamble (Unix.descr_of_in_channel ic)
+
 let server_exists lock_file = not (Lock.check lock_file)
 
 let wait_on_server_restart ic =
@@ -47,7 +51,7 @@ let establish_connection config =
 let get_cstate (ic, oc) =
   try
     send_build_id_ohai oc;
-    let cstate : connection_state = Marshal.from_channel ic in
+    let cstate : connection_state = from_channel ic in
     Result.Ok (ic, oc, cstate)
   with e ->
     Unix.shutdown_connection ic;
@@ -75,7 +79,7 @@ let verify_cstate ic = function
 (** Consume sequence of Prehandoff messages. *)
 let consume_prehandoff_messages ic =
   let open Prehandoff in
-  let m: msg = Marshal.from_channel ic in
+  let m: msg = Marshal_tools.from_fd_with_preamble (Unix.descr_of_in_channel ic) in
   match m with
   | Sentinel -> ()
   | Shutting_down ->
@@ -105,6 +109,7 @@ let connect_once config =
       end >>= fun (ic, oc, cstate) ->
       verify_cstate ic cstate >>= fun () ->
       consume_prehandoff_messages ic;
+      Printf.eprintf "MonitorConnection Ok\n%!";
       Ok (ic, oc)
   with
   | Exit_status.Exit_with _  as e -> raise e

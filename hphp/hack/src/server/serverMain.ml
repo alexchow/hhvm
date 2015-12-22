@@ -159,7 +159,11 @@ let handle_connection_ genv env ic oc =
     flush oc;
     ServerCommand.handle genv env (ic, oc)
   with
-  | Sys_error("Broken pipe") | ServerCommand.Read_command_timeout ->
+  | Sys_error("Broken pipe") ->
+    Hh_logger.log "Got broken pipe on handling Server command";
+    shutdown_client (ic, oc)
+  | ServerCommand.Read_command_timeout ->
+    Hh_logger.log "Got read command timeout on handling Server command";
     shutdown_client (ic, oc)
   | e ->
     let msg = Printexc.to_string e in

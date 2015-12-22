@@ -31,8 +31,7 @@ exception Send_fd_failure of int
 let fd_to_int (x: Unix.file_descr) : int = Obj.magic x
 
 let msg_to_channel oc msg =
-  Marshal.to_channel oc msg [];
-  flush oc
+  Marshal_tools.to_fd_with_preamble (Unix.descr_of_out_channel oc) msg
 
 let kill_server process =
   try Unix.kill process.pid Sys.sigusr2 with
@@ -115,7 +114,8 @@ let hand_off_client_connection server client_fd =
     (Hh_logger.log "Failed to handoff FD to server.";
      raise (Send_fd_failure status))
   else
-    (Unix.close client_fd;
+    (
+     Unix.close client_fd;
      ())
 
 (** Sends the client connection FD to the server process then closes the

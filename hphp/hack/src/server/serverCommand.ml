@@ -28,9 +28,14 @@ exception Read_command_timeout
 (****************************************************************************)
 let rpc : type a. in_channel * out_channel -> a ServerRpc.t -> a
 = fun (ic, oc) cmd ->
-  Marshal.to_channel oc (Rpc cmd) [];
-  flush oc;
-  Marshal.from_channel ic
+  match Unix.select [] [Unix.descr_of_out_channel oc] [] 1.0 with
+  | _, [], _ ->
+    Printf.eprintf "Error, can't send RPC command. Channel not ready for writing.\n%!";
+    exit 10
+  | _ ->
+    Marshal.to_channel oc (Rpc cmd) [];
+    flush oc;
+    Marshal.from_channel ic
 
 let stream_request oc cmd =
   Marshal.to_channel oc (Stream cmd) [];
@@ -152,12 +157,29 @@ let stream_response (genv:ServerEnv.genv) env (ic, oc) ~cmd =
 
 let from_channel : type a. in_channel -> a command = Marshal.from_channel
 
-let handle genv env (ic, oc) =
-  let msg =
-    Sys_utils.with_timeout 1
-      ~on_timeout: (fun _ -> raise Read_command_timeout)
+let rec handle ?(retries = 10) genv env (ic, oc) =
+  match Unix.select [Unix.descr_of_in_channel ic] [] [] 1.0 with
+  | [], _, _ ->
+    begin
+    Printf.eprintf "Can't read command - channel not ready to be read.\n%!";
+    if retries = 0 then
+      raise Read_command_timeout
+    else
+      (Printf.eprintf "Going to retry.\n%!";
+      handle ~retries:(retries - 1) genv env (ic, oc))
+    end
+  | _ ->
+  let msg = from_channel ic
+(*
+    Sys_utils.with_timeout 2
+      ~on_timeout: (fun _ -> begin
+         Printf.eprintf "Reading command from channel timed out.\n%!";
+         raise Read_command_timeout
+       end)
       ~do_: (fun () -> from_channel ic)
+*)
   in
+  Printf.eprintf "Got cmd from client.\n%!";
   match msg with
   | Rpc cmd ->
       let response = ServerRpc.handle genv env cmd in

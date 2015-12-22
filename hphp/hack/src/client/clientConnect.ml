@@ -145,10 +145,12 @@ let rec wait_for_server_hello ic env retries start_time tail_env first_call =
       start_time tail_env false
   ) else
     try
-      (match input_line ic with
+      (Printf.eprintf "Going to read Hello line\n%!";
+      match input_line ic with
       | "Hello" ->
-        ()
+        Printf.eprintf "Got Hello line.\n%!";
       | _ ->
+        Printf.eprintf "Unexpectedly got other non_Hello line\n%!";
         print_wait_msg_and_sleep start_time tail_env;
         wait_for_server_hello ic env (Option.map retries (fun x -> x - 1))
           start_time tail_env false
